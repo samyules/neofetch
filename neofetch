@@ -2032,10 +2032,15 @@ get_battery() {
 get_local_ip() {
     case "$os" in
         "Linux" | "BSD" | "Solaris" | "AIX" | "IRIX")
-            local_ip="$(ip route get 1 | awk -F'src' '{print $2; exit}')"
-            local_ip="${local_ip/uid*}"
-            [[ -z "$local_ip" ]] && local_ip="$(ifconfig -a | awk '/broadcast/ {print $2; exit}')"
-        ;;
+            if [[ $local_ip_iface == "auto" ]]
+	      then
+                local_ip="$(ip route get 1 | awk -F'src' '{print $2; exit}')"
+                local_ip="${local_ip/uid*}"
+                [[ -z "$local_ip" ]] && local_ip="$(ifconfig -a | awk '/broadcast/ {print $2; exit}')"
+	      else
+		local_ip="$(ifconfig $local_ip_iface | grep inet | awk -F ' ' '{print $2; exit}')"
+	    fi
+	;;
 
         "MINIX")
             local_ip="$(ifconfig | awk '{printf $3; exit}')"
@@ -2049,6 +2054,9 @@ get_local_ip() {
         "Windows")
             local_ip="$(ipconfig | awk -F ': ' '/IPv4 Address/ {printf $2 ", "}')"
             local_ip="${local_ip%\,*}"
+		
+		#$local_ip_iface != "auto"
+		#local_ip="$(netsh interface ip show addresses "Ethernet 2" | awk -F : '/IP Address/ {printf $2}')"
         ;;
 
         "Haiku")
@@ -2070,6 +2078,17 @@ get_public_ip() {
 
     if [[ -z "$public_ip" ]] && type -p wget >/dev/null; then
         public_ip="$(wget -T 10 -qO- "$public_ip_host")"
+    fi
+}
+
+get_public_ip_loc() {
+    if [[ ! -z "$public_ip" ]] && type -p curl >/dev/null; then
+        tmploc=$(mktemp /tmp/loctest.XXXXXX)
+        curl --max-time 10 -s freegeoip.net/xml/$public_ip | cat > $tmploc
+        city=$(cat $tmploc | awk -F '[<>]' '/City/{print $3}')
+        region=$(cat $tmploc | awk -F '[<>]' '/RegionName/{print $3}')
+        public_ip_loc="$city, $region"
+        rm "$tmploc"
     fi
 }
 
