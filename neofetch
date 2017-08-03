@@ -2030,40 +2030,44 @@ get_battery() {
 }
 
 get_local_ip() {
-    case "$os" in
-        "Linux" | "BSD" | "Solaris" | "AIX" | "IRIX")
-            if [[ $local_ip_iface == "auto" ]]
-	      then
-                local_ip="$(ip route get 1 | awk -F'src' '{print $2; exit}')"
-                local_ip="${local_ip/uid*}"
-                [[ -z "$local_ip" ]] && local_ip="$(ifconfig -a | awk '/broadcast/ {print $2; exit}')"
-	      else
-		local_ip="$(ifconfig $local_ip_iface | grep inet | awk -F ' ' '{print $2; exit}')"
-	    fi
-	;;
+    if [[ $local_ip_iface == "auto" ]]; then
+    	case "$os" in
+        	"Linux" | "BSD" | "Solaris" | "AIX" | "IRIX")
+                	local_ip="$(ip route get 1 | awk -F'src' '{print $2; exit}')"
+                	local_ip="${local_ip/uid*}"
+                	[[ -z "$local_ip" ]] && local_ip="$(ifconfig -a | awk '/broadcast/ {print $2; exit}')"
+		;;
 
-        "MINIX")
-            local_ip="$(ifconfig | awk '{printf $3; exit}')"
-        ;;
+        	"MINIX")
+            		local_ip="$(ifconfig | awk '{printf $3; exit}')"
+        	;;
 
-        "Mac OS X" | "iPhone OS")
-            local_ip="$(ipconfig getifaddr en0)"
-            [[ -z "$local_ip" ]] && local_ip="$(ipconfig getifaddr en1)"
-        ;;
+        	"Mac OS X" | "iPhone OS")
+            		local_ip="$(ipconfig getifaddr en0)"
+            		[[ -z "$local_ip" ]] && local_ip="$(ipconfig getifaddr en1)"
+        	;;
 
-        "Windows")
-            local_ip="$(ipconfig | awk -F ': ' '/IPv4 Address/ {printf $2 ", "}')"
-            local_ip="${local_ip%\,*}"
-		
-		#$local_ip_iface != "auto"
-		#local_ip="$(netsh interface ip show addresses "Ethernet 2" | awk -F : '/IP Address/ {printf $2}')"
-        ;;
+        	"Windows")
+            		local_ip="$(ipconfig | awk -F ': ' '/IPv4 Address/ {printf $2 ", "}')"
+            		local_ip="${local_ip%\,*}"
+		;;
 
-        "Haiku")
-            local_ip="$(ifconfig | awk -F ': ' '/Bcast/ {print $2}')"
-            local_ip="${local_ip/', Bcast'}"
-        ;;
-    esac
+        	"Haiku")
+            		local_ip="$(ifconfig | awk -F ': ' '/Bcast/ {print $2}')"
+            		local_ip="${local_ip/', Bcast'}"
+        	;;
+    	esac
+    else
+     	case "$os" in
+        	"Linux" | "BSD" | "Solaris" | "AIX" | "IRIX")  
+			local_ip="$(ifconfig $local_ip_iface | grep inet | awk -F ' ' '{print $2; exit}')"
+	 	;;
+	 
+	 	"Windows")
+	 		local_ip="$(netsh interface ip show addresses "Ethernet 2" | awk -F : '/IP Address/ {printf $2}')"
+		;;
+    	esac
+    fi
 }
 
 get_public_ip() {
